@@ -241,7 +241,7 @@ void run(void) {
 
             i = strtol(line, NULL, 10);
             i -= 1;
-            if (i >= 0 && i < json_object_array_length(walk)) break;
+            if (i < json_object_array_length(walk)) break;
             printf("entered number is not in the list\n");
         }
         walk = json_object_array_get_idx(walk, i);
