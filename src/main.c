@@ -89,8 +89,8 @@ void wikipedia_request(enet_socket *sock)
     jmp_buf err;
     http_transport http;
     json_object *jobj = NULL;
-    json_tokener *jtk = NULL;
-    char *buf = NULL;
+    json_tokener *volatile jtk = NULL;
+    char *volatile buf = NULL;
     size_t read;
     int len;
     reqc = esock_get_data(sock);
