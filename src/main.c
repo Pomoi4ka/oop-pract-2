@@ -188,7 +188,7 @@ void strip(char **line)
     int len;
     while (isspace(**line)) (*line)++;
     len = strlen(*line);
-    while (isspace((*line)[len-1])) (*line)[--len] = 0;
+    while (len && isspace((*line)[len-1])) (*line)[--len] = 0;
 }
 
 void run(void) {
