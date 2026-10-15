@@ -210,9 +210,9 @@ void run(void) {
         size_t i;
         printf("> ");
         fflush(stdout);
-        if (ev_yield() & EV_F_EXCEPTIONS) break;
+        if (ev_yield() & EV_F_EXCEPTIONS) return;
         line = fgets(buffer, sizeof buffer, stdin);
-        if (!line) break;
+        if (!line) return;
         strip(&line);
 
         encoded = urlencode(line);
@@ -243,9 +243,9 @@ void run(void) {
         for (;;) {
             printf("select page> ");
             fflush(stdout);
-            if (ev_yield() & EV_F_EXCEPTIONS) break;
+            if (ev_yield() & EV_F_EXCEPTIONS) return;
             line = fgets(buffer, sizeof buffer, stdin);
-            if (!line) break;
+            if (!line) return;
             strip(&line);
 
             i = strtol(line, NULL, 10);
