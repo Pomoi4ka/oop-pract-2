@@ -30,8 +30,8 @@ char *urlencode(const char *p)
             continue;
         }
         *c++ = '%';
-        *c++ = (q&0xf) < 10 ? (q&0xf) + '0' : (q&0xf) + 'A' - 10;
         *c++ = (q>>4) < 10 ? (q>>4) + '0' : (q>>4) + 'A' - 10;
+        *c++ = (q&0xf) < 10 ? (q&0xf) + '0' : (q&0xf) + 'A' - 10;
     }
     *c = 0;
     return e;
@@ -204,14 +204,9 @@ void run(void) {
 
     encoded = NULL;
     for (;;) {
-        int ret;
         printf("> ");
         fflush(stdout);
-        ret = ev_yield();
-        if (ret & EV_F_EXCEPTIONS) {
-            printf("%d\n", ret);
-            break;
-        }
+        if (ev_yield() & EV_F_EXCEPTIONS) break;
         line = fgets(buffer, sizeof buffer, stdin);
         if (!line) break;
         strip(&line);
