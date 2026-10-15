@@ -10,6 +10,8 @@
 
 #include <json-c/json.h>
 
+#include "strutils.h"
+
 #define HOST "ru.wikipedia.org"
 #define PORT 443
 
@@ -17,24 +19,6 @@ int64_t stdin_cb(void *d)
 {
     (void) d;
     return STDIN_FILENO;
-}
-
-char *urlencode(const char *p)
-{
-    char *e = malloc(strlen(p)*3 + 1);
-    char *c = e;
-    for (; *p; ++p) {
-        unsigned char q = *p;
-        if (isalnum(q)) {
-            *c++ = q;
-            continue;
-        }
-        *c++ = '%';
-        *c++ = (q>>4) < 10 ? (q>>4) + '0' : (q>>4) + 'A' - 10;
-        *c++ = (q&0xf) < 10 ? (q&0xf) + '0' : (q&0xf) + 'A' - 10;
-    }
-    *c = 0;
-    return e;
 }
 
 void spinner(void)
@@ -183,14 +167,6 @@ void request_wikipedia(struct wikipedia_resp *resp, const char *encoded, essl_ct
 
     enet_connect_tcp(loop, HOST, PORT, wikipedia_request, &reqc);
     ev_recv_message();
-}
-
-void strip(char **line)
-{
-    int len;
-    while (isspace(**line)) (*line)++;
-    len = strlen(*line);
-    while (len && isspace((*line)[len-1])) (*line)[--len] = 0;
 }
 
 void run(void) {
