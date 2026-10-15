@@ -1,0 +1,6 @@
+[submodule "evloop2"]
+	path = evloop2
+	url = https://github.com/M0x1m/evloop2
+[submodule "libco"]
+	path = libco
+	url = https://github.com/M0x1m/libco
