@@ -219,6 +219,13 @@ void run(void) {
         spinner_stop(spinner);
         free(encoded);
 
+        switch (resp.status) {
+        case WRS_OK: break;
+        case WRS_CONNECTION_FAILED: fprintf(stderr, "error: connection failed\n"); continue;
+        case WRS_INVALID_RESPONSE: fprintf(stderr, "error: invalid response\n"); continue;
+        case WRS_TRANSPORT_FAILURE: fprintf(stderr, "error: transport failure\n"); continue;
+        }
+
         walk = resp.payload;
         if (!json_object_object_get_ex(walk, "query", &walk)) goto cleanup;
         if (!json_object_object_get_ex(walk, "search", &walk)) goto cleanup;
