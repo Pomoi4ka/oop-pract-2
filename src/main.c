@@ -204,6 +204,8 @@ void run(void) {
 
     encoded = NULL;
     for (;;) {
+        json_object *walk;
+        size_t i;
         printf("> ");
         fflush(stdout);
         if (ev_yield() & EV_F_EXCEPTIONS) break;
@@ -211,16 +213,52 @@ void run(void) {
         if (!line) break;
         strip(&line);
 
-        free(encoded);
         encoded = urlencode(line);
-
         spinner = spinner_start("Searching... ");
         request_wikipedia(&resp, encoded, ssl);
         spinner_stop(spinner);
+        free(encoded);
 
-        printf("%d %s\n", resp.status, json_object_to_json_string(resp.payload));
+        walk = resp.payload;
+        if (!json_object_object_get_ex(walk, "query", &walk)) goto cleanup;
+        if (!json_object_object_get_ex(walk, "search", &walk)) goto cleanup;
+
+        for (i = 0; i < json_object_array_length(walk); ++i) {
+            json_object *title;
+            json_object *result = json_object_array_get_idx(walk, i);
+            if (!json_object_object_get_ex(result, "title", &title)) continue;
+            if (json_object_get_type(title) != json_type_string) continue;
+            printf("%ld: %s\n", i + 1, json_object_get_string(title));
+        }
+
+        for (;;) {
+            printf("select page> ");
+            fflush(stdout);
+            if (ev_yield() & EV_F_EXCEPTIONS) break;
+            line = fgets(buffer, sizeof buffer, stdin);
+            if (!line) break;
+            strip(&line);
+
+            i = strtol(line, NULL, 10);
+            i -= 1;
+            if (i > 0 && i < json_object_array_length(walk)) break;
+            printf("entered number is not in the list\n");
+        }
+        walk = json_object_array_get_idx(walk, i);
+        if (!json_object_object_get_ex(walk, "pageid", &walk)) {
+            fprintf(stderr, "error: wikipedia api changed\n");
+            continue;
+        }
+        if (json_object_get_type(walk) != json_type_int) {
+            fprintf(stderr, "error: wikipedia api changed\n");
+            continue;
+        }
+        snprintf(buffer, sizeof buffer, "xdg-open https://ru.wikipedia.org/w/index.php?curid=%d", json_object_get_int(walk));
+        system(buffer);
+
+    cleanup:
+        json_object_put(resp.payload);
     }
-    free(encoded);
 }
 
 int main(void)
