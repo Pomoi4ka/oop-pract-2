@@ -139,6 +139,7 @@ void wikipedia_request(enet_socket *sock)
             if ((size_t)resp.content_length < read + len)
                 len = resp.content_length - read;
         } else {
+            /* this is hackish, thank you http, very cool */
             unsigned short term = '\r'|('\n'<<8);
             char *c = chunk;
             do {
@@ -153,6 +154,7 @@ void wikipedia_request(enet_socket *sock)
             buf = malloc(len);
         }
         http_recv(&http, buf, len);
+        read += len;
         if (resp.content_length < 0) http_recv(&http, chunk, 2); /* extra \r\n */
         jobj = json_tokener_parse_ex(jtk, buf, len);
     } while (!jobj);
