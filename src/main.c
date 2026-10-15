@@ -219,9 +219,9 @@ void run(void) {
         for (;;) {
             printf("select page> ");
             fflush(stdout);
-            if (ev_yield() & EV_F_EXCEPTIONS) return;
+            if (ev_yield() & EV_F_EXCEPTIONS) goto cleanup;
             line = fgets(buffer, sizeof buffer, stdin);
-            if (!line) return;
+            if (!line) goto cleanup;
             strip(&line);
 
             i = strtol(line, NULL, 10);
