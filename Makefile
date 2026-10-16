@@ -13,8 +13,8 @@ all: search
 search: $(OBJS) libco/libco.o
 	$(CC) $(CFLAGS) -o $@ $(OBJS) libco/libco.o $(LIBS)
 
-src/runtime.o: INCLUDES += -Isrc/io/
-src/main.o: INCLUDES += -Isrc/io/
+src/http.o: INCLUDES += -Isrc/io/
+src/wikipedia.o: INCLUDES += -Isrc/io/
 
 libco/libco.o: CFLAGS =
 libco/libco.o: libco/libco.c
