@@ -1,0 +1,50 @@
+// Жизненный цикл корутины сетевого запроса
+// dot -Tsvg wikipedia-cli-request-fsm.dot -o wikipedia-cli-request-fsm.svg
+
+digraph RequestCoroutineFSM {
+    rankdir=LR;
+    fontname="Helvetica";
+    fontsize=11;
+    node [shape=box, style="rounded", fontname="Helvetica", fontsize=10];
+    edge [fontname="Helvetica", fontsize=9, fontcolor="#444444"];
+
+    created  [label="CREATED\n(eloop_add)"];
+    connect  [label="TCP_CONNECTING\nev_yield(EV_F_WRITE)", style=filled, fillcolor="#e6f0ff"];
+    tls      [label="TLS_HANDSHAKE\nSSL_connect + ev_yield", style=filled, fillcolor="#e6f0ff"];
+    send     [label="SENDING_REQUEST\nhttp_send_req / headers"];
+    waithdr  [label="WAITING_HEADERS\nhttp_recv_resp + ev_yield", style=filled, fillcolor="#e6f0ff"];
+    hdrdone  [label="HEADERS_PARSED\nstatus_code == 200"];
+    body     [label="READING_BODY\nhttp_recv + ev_yield", style=filled, fillcolor="#e6f0ff"];
+    parse    [label="PARSING_JSON\njson_tokener_parse_ex"];
+    done     [label="DONE\nresp->status = WRS_OK\nresp->payload = obj", style="rounded,filled", fillcolor="#e6ffe6"];
+    err_conn [label="ERROR_CONNECTION\nWRS_CONNECTION_FAILED", style="rounded,filled", fillcolor="#ffe6e6"];
+    err_tr   [label="ERROR_TRANSPORT\nWRS_TRANSPORT_FAILURE", style="rounded,filled", fillcolor="#ffe6e6"];
+    err_resp [label="ERROR_RESPONSE\nWRS_INVALID_RESPONSE", style="rounded,filled", fillcolor="#ffe6e6"];
+    fini     [label="FINI\nev_send_message(parent)\nev_terminate", style=filled, fillcolor="#fffbe6"];
+
+    created  -> connect  [label="connect(2) returns EINPROGRESS"];
+    connect  -> err_conn [label="EINPROGRESS timeout\nили SO_ERROR != 0"];
+    connect  -> tls      [label="SO_ERROR == 0"];
+
+    tls      -> err_tr   [label="SSL_connect < 0"];
+    tls      -> send     [label="handshake done"];
+
+    send     -> waithdr  [label="http_end_request()\nbio_flush"];
+
+    waithdr  -> err_tr   [label="longjmp(HTTP_ERR_TRANSPORT)"];
+    waithdr  -> hdrdone  [label="status == 200"];
+    waithdr  -> err_resp [label="status != 200"];
+
+    hdrdone  -> body     [label="content_length >= 0\nили chunked"];
+
+    body     -> err_tr   [label="longjmp(HTTP_ERR_TRANSPORT)\nили PRASE_LIMIT"];
+    body     -> parse    [label="chunk прочитан"];
+
+    parse    -> done     [label="json_tokener_parse_ex\nвернул объект"];
+    parse    -> body     [label="need more data"];
+
+    done     -> fini;
+    err_conn -> fini;
+    err_tr   -> fini;
+    err_resp -> fini;
+}

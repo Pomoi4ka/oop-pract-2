@@ -1,0 +1,257 @@
+// delivery-uml.dot
+// dot -Tsvg delivery-uml.dot -o uml.svg
+
+digraph WikiCLI_UML {
+    rankdir=TB;
+    compound=true;
+    fontname="Helvetica";
+    fontsize=11;
+    node [shape=record, fontname="Helvetica", fontsize=10];
+    edge [fontname="Helvetica", fontsize=9, fontcolor="#444444"];
+
+    /* ============================================================
+     *  APPLICATION  (main + userloop)
+     * ============================================================ */
+    subgraph cluster_app {
+        label="application/  (entry + REPL)";
+        style=solid;
+        color="#333333";
+        fontcolor="#333333";
+
+        main_node [
+            label="{main.c|+ main() : int\l}"
+        ];
+
+        userloop [
+            label="{userloop.c|\
+- prompt(prompt, buf, len) : char *\l\
+- search(line) : json_object *\l\
+- select_variant(payload) : json_object *\l\
+- display_variants(payload) : int\l\
+- open_in_browser(obj)\l\
++ userloop() : void\l}"
+        ];
+
+        stdin_cb [
+            shape=note, style=filled, fillcolor="#fffbe6",
+            label="stdin_cb(d) : int64_t\l(транспортный хэндл для stdin)"
+        ];
+    }
+
+    /* ============================================================
+     *  DOMAIN  (wikipedia + spinner)
+     * ============================================================ */
+    subgraph cluster_domain {
+        label="domain/  (wikipedia + spinner)";
+        style=solid;
+        color="#333333";
+        fontcolor="#333333";
+
+        wikipedia_resp [
+            label="{wikipedia_resp|status : wiki_resp_status\lpayload : json_object *\l}"
+        ];
+
+        wiki_resp_status [
+            shape=ellipse, style=dashed,
+            label="«enum»\lwiki_resp_status\lOK\lCONNECTION_FAILED\lINVALID_RESPONSE\lTRANSPORT_FAILURE"
+        ];
+
+        wikipedia_req_closure [
+            label="{«struct» wikipedia_req_closure|resp : wikipedia_resp *\lencoded_query : const char *\lparent : ev_task *\lssl : essl_ctx_t\l}"
+        ];
+
+        wikipedia_api [
+            label="{wikipedia.c|\
+- wikipedia_request(sock) : void\l\
++ request_wikipedia(resp, q, ssl) : void\l}"
+        ];
+
+        spinner_api [
+            label="{spinner.c|\
+- spinner() : void\l\
++ spinner_start(msg) : ev_task *\l\
++ spinner_stop(sp) : void\l}"
+        ];
+    }
+
+    /* ============================================================
+     *  UTILITIES
+     * ============================================================ */
+    subgraph cluster_utils {
+        label="utils/";
+        style=dashed;
+        color="#888888";
+        fontcolor="#666666";
+
+        strutils [
+            label="{strutils.c|\
++ urlencode(p) : char *\l\
++ strip(line) : void\l}"
+        ];
+
+        bufio [
+            label="{bufio|handler : void *\l\
+read : int (*)(void *, void *, int)\l\
+write : void (*)(void *, const void *, int)\l\
+rb_avail, rb_pos : int\l\
+wb_avail, wb_pos : int\l\
+readbuf[4096] : char\l\
+writebuf[4096] : char\l|\
++ bio_init(...)\l\
++ bio_read(b, buf, n)\l\
++ bio_send(b, buf, n)\l\
++ bio_flush(b)\l\
++ bio_printf(b, fmt, ...)\l\
++ bio_read_until(b, dst, pat, lim) : int\l}"
+        ];
+    }
+
+    /* ============================================================
+     *  TRANSPORT STACK
+     * ============================================================ */
+    subgraph cluster_http {
+        label="eloop_http.h  (HTTP/1.1)";
+        color="#cce0ff";
+
+        http_transport [
+            label="{http_transport|io : void *\lonerror : jmp_buf *\lflags : int\lbio : bufio\l|\
++ http_connect(t, sock, err)\l\
++ https_connect(t, ctx, sock, err)\l\
++ http_send_req(t, m, p)\l\
++ http_send_header(t, n, v)\l\
++ http_end_request(t)\l\
++ http_recv_resp(t, resp, hdrs)\l\
++ http_recv(t, buf, n)\l\
++ http_send(t, buf, n)\l}"
+        ];
+
+        http_resp [
+            label="{http_resp|status_code : int\lcontent_length : int64_t\l}"
+        ];
+
+        http_parser [
+            shape=note, style=filled, fillcolor="#e6f0ff",
+            label="«internal» http__parser\l(rolling window + patterns)"
+        ];
+    }
+
+    subgraph cluster_ssl {
+        label="eloop_ssl.h  (TLS)";
+        color="#ffe0cc";
+
+        essl [
+            label="{essl|ssl : SSL *\ldata : void *\lcbs : essl_callbacks\lerror : essl_error\l|\
++ essl_connect(ctx, s, sock)\l\
++ essl_accept(ctx, s, sock)\l\
++ essl_recv(s, buf, n) : int\l\
++ essl_send(s, buf, n) : int\l\
++ essl_close(s)\l\
++ essl_free(s)\l\
++ essl_wait(s, flags) : int\l}"
+        ];
+    }
+
+    subgraph cluster_net {
+        label="eloop_net.h  (sockets)";
+        color="#e6e6ff";
+
+        enet_socket [
+            label="{enet_socket|fd : intptr_t\ltype : enet_socktype\lerror : enet_error\laddr, addrlen\l\
+data : void *\lcbs : esock_callbacks\l\
+transport_state : void *\ltransport_cleanup : fn\l|\
++ esock_accept/recv/send/close\l\
++ esock_wait(s, flags)\l\
++ esock_setup_transport(s, st, cl)\l\
++ esock_get/​set_data\l}"
+        ];
+    }
+
+    subgraph cluster_eloop {
+        label="event_loop2.h  (coroutines + poll)";
+        color="#e6ffe6";
+
+        event_loop [
+            label="{event_loop|env : cothread_t\lalive, dead : ev_task *\lstack_size : size_t\lflags : int\lator + alloc/free\l|\
++ eloop_init(ev)\l\
++ eloop_add(ev, routine) : ev_task *\l\
++ eloop_run(ev)\l}"
+        ];
+
+        ev_task [
+            label="{ev_task|env, parent : cothread_t\lroutine : ev_routine\lnext : ev_task *\lsize : size_t\l\
+message : {data, partner}\ldata : void *\l\
+data_to_transport_handle : fn\lcleanup : fn\l\
+timeout, elapsed, wait_flags, wake_flags, flags\l|\
++ ev_yield() : int\l\
++ ev_send_message(dst, msg)\l\
++ ev_recv_message() : void *\l\
++ ev_current() : ev_task *\l\
++ ev_terminate()\l}"
+        ];
+
+        libco [
+            shape=ellipse, style=dashed,
+            label="libco\l(co_derive, co_active,\lco_switch)"
+        ];
+    }
+
+    /* ============================================================
+     *  RELATIONS — application
+     * ============================================================ */
+    main_node -> userloop    [label="loops", arrowhead=vee];
+    main_node -> event_loop  [label="eloop_init/run", arrowhead=vee, constraint=false];
+    main_node -> essl        [label="essl_init", arrowhead=vee, constraint=false];
+
+    userloop -> strutils     [label="urlencode/strip", arrowhead=vee, style=dashed];
+    userloop -> wikipedia_api[label="request_wikipedia", arrowhead=vee, style=dashed];
+    userloop -> spinner_api  [label="start/stop", arrowhead=vee, style=dashed];
+
+    /* ============================================================
+     *  RELATIONS — domain
+     * ============================================================ */
+    wikipedia_api -> wikipedia_resp       [label="owns", arrowhead=diamond];
+    wikipedia_resp -> wiki_resp_status    [label="uses", arrowhead=vee, style=dashed];
+    wikipedia_api -> wikipedia_req_closure[label="stack-alloc", arrowhead=diamond];
+    wikipedia_req_closure -> wikipedia_resp [label="points to", arrowhead=vee];
+    wikipedia_req_closure -> ev_task      [label="parent", arrowhead=vee];
+    wikipedia_req_closure -> essl         [label="ssl", arrowhead=vee];
+    wikipedia_api -> http_transport       [label="http_*", arrowhead=vee, style=dashed];
+    wikipedia_api -> bufio                [style=dashed, arrowhead=vee, constraint=false];
+
+    /* ============================================================
+     *  RELATIONS — http
+     * ============================================================ */
+    http_transport -> bufio          [label="bio", arrowhead=diamond];
+    http_transport -> http_resp      [label="out", arrowhead=vee, style=dashed];
+    http_transport -> http_parser    [style=dashed, arrowhead=vee];
+
+    /* ============================================================
+     *  RELATIONS — transport stack
+     * ============================================================ */
+    http_transport -> essl   [label="io (if https)", arrowhead=vee, style=dashed];
+    http_transport -> enet_socket [label="io (if http)", arrowhead=vee, style=dashed];
+    essl -> enet_socket      [label="uses", arrowhead=vee, style=dashed];
+    enet_socket -> event_loop[label="ev_*", arrowhead=vee, style=dashed];
+    event_loop -> ev_task    [label="alive", arrowhead=diamond];
+    ev_task -> event_loop    [label="loop", arrowhead=vee];
+    ev_task -> libco         [label="co_*", arrowhead=vee, style=dashed];
+
+    /* ============================================================
+     *  Coroutine data-flow hint
+     * ============================================================ */
+    edge [style=dashed, color="#aa4444", fontcolor="#aa4444"];
+    userloop -> spinner_api [label="async", arrowhead=vee, constraint=false];
+    spinner_api -> ev_task  [label="async", arrowhead=vee, constraint=false];
+
+    /* legend */
+    legend [shape=note, style=filled, fillcolor="#fffbe6", fontname="Helvetica",
+        label="◆ = владение (composition)\l\
+                ▷ = наследование\l\
+                --- = зависимость (dependency)\l\
+                «async» = параллельная корутина\l\
+                \l\
+                Правило проекта:\l\
+                - application/domain не знают про\lbufio и http_parser\l\
+                - transport stack знает только\lsensл ниже себя\l\
+                - всё \"висит\" на event_loop\l"];
+}

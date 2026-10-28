@@ -1,0 +1,768 @@
+\documentclass[12pt]{extarticle}
+
+\usepackage{tabularx}
+\usepackage{amsmath}
+\usepackage{extsizes}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage[english,russian]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper]{geometry}
+\geometry{top=20mm,bottom=30mm,left=20mm,right=15mm}
+\usepackage[T1,T2A]{fontenc}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{indentfirst}
+\usepackage{caption}
+\renewcommand{\baselinestretch}{1.5}
+\usepackage{spverbatim}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tabularray}
+\lstset{extendedchars=\true}
+\usepackage{hyperref}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+    pdftitle={Практическая работа №2: клиент Википедии},
+}
+
+\definecolor{sessionbg}{gray}{0.96}
+\definecolor{sessionframe}{gray}{0.55}
+
+\lstdefinestyle{session}{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true,
+    frame=single,
+    framesep=6pt,
+    framerule=0.4pt,
+    rulecolor=\color{sessionframe},
+    backgroundcolor=\color{sessionbg},
+    showstringspaces=false,
+    upquote=true,
+    aboveskip=8pt,
+    belowskip=8pt,
+    captionpos=b,
+    xleftmargin=0pt,
+    xrightmargin=0pt,
+}
+
+\newcommand{\cmd}[1]{\texttt{#1}}
+\newcommand{\ui}[1]{\texttt{>\,#1}}
+
+\definecolor{codebg}{gray}{0.96}
+\definecolor{comment}{gray}{0.45}
+\definecolor{keyword}{RGB}{0, 75, 150}
+\definecolor{string}{RGB}{150, 80, 30}
+\definecolor{number}{gray}{0.5}
+\definecolor{identifier}{rgb}{0,0,0}
+
+\lstdefinestyle{coolprint}{
+  basicstyle   = \ttfamily\footnotesize,
+  keywordstyle = \bfseries\color{keyword},
+  commentstyle = \itshape\color{comment},
+  stringstyle  = \color{string},
+  identifierstyle = \color{identifier},
+  backgroundcolor = \color{codebg},
+  numbers      = left,
+  numberstyle  = \footnotesize\color{number},
+  numbersep    = 5pt,
+  frame        = single,
+  framerule    = 0.8pt,
+  framesep     = 3pt,
+  breaklines   = true,
+  breakatwhitespace = true,
+  tabsize      = 4,
+  showspaces   = false,
+  showstringspaces = false,
+  showtabs     = false,
+  xleftmargin  = 10pt,
+  xrightmargin = 5pt,
+  aboveskip    = \medskipamount,
+  belowskip    = \medskipamount,
+  captionpos   = b,
+}
+
+\usepackage{ragged2e}
+\justifying
+
+\titleformat{\section}{\centering\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\centering\bfseries}{\thesubsection}{1em}{}
+
+\begin{document}
+
+\begin{center}
+  \textbf{МИНОБРНАУКИ РОССИИ} \\
+  \textbf{Санкт-Петербургский государственный} \\
+  \textbf{электротехнический университет} \\
+  \textbf{«ЛЭТИ» им. В.И. Ульянова (Ленина)} \\
+  \textbf{Кафедра САПР} \\
+\end{center}
+
+\vspace{0.25\textheight}
+
+\begin{center}
+\textbf{Практическая работа №2} \\
+\textbf{по дисциплине} \\
+\textbf{«Объектно-ориентированное программирование»} \\
+\end{center}
+
+\vspace*{\fill}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{ l X r }
+ Студент гр. 5352 & \rule{8cm}{0.2mm} & Соболевский М.А. \\
+ Преподаватель & \rule{8cm}{0.2mm} & Кулагин М.В. \\
+\end{tabularx}
+\end{center}
+
+\vspace{3em}
+
+\begin{center}
+Санкт-Петербург\\
+\the\year
+\end{center}
+
+\thispagestyle{empty}
+
+\pagebreak
+
+\section{Задание}
+
+Разработать консольное приложение на языке~C, взаимодействующее с
+внешним HTTP-API по протоколу HTTPS. Приложение должно:
+
+\begin{itemize}
+    \item реализовывать асинхронное (неблокирующее) взаимодействие с
+          сетевыми ресурсами, не блокируя пользовательский интерфейс
+          на время выполнения запроса;
+    \item поддерживать интерактивный интерфейс пользователя
+          (REPL-цикл), позволяющий отправлять запросы и получать
+          результаты без перезапуска программы;
+    \item корректно обрабатывать сетевые ошибки: недоступность
+          сервера, ошибки TLS-рукопожатия, ошибки парсинга HTTP и
+          JSON, таймауты;
+    \item отображать прогресс выполнения длительных операций
+          (индикатор активности, не засоряющий вывод);
+    \item обеспечивать чистое разделение ответственности между
+          слоями приложения: транспортом, клиентом API и
+          пользовательским интерфейсом;
+    \item демонстрировать применение принципов объектно-ориентированного
+          проектирования в условиях языка~C: инкапсуляция состояния,
+          композиция компонентов, полиморфизм через интерфейсы,
+          абстракция.
+\end{itemize}
+
+В качестве целевого API выбран поисковый API Википедии: программа
+принимает от пользователя поисковый запрос, выполняет HTTPS-запрос
+к \texttt{ru.wikipedia.org}, отображает список найденных статей и
+по выбору пользователя открывает соответствующую статью в браузере
+системы.
+
+\section{Спецификация программы}
+
+Архитектура программы представлена на рисунке~\ref{fig:components}.
+Приложение разделено на четыре слоя, каждый из которых знает только
+о соседнем нижнем слое и не имеет обратных зависимостей.
+
+\includegraphics[width=\textwidth]{assets/uml}
+
+\begin{figure}[h]
+\caption{Диаграмма компонентов}
+\label{fig:components}
+\end{figure}
+
+Жизненный цикл асинхронного запроса показан на
+рисунке~\ref{fig:request-fsm}. Каждый сетевой запрос выполняется в
+отдельной корутине, которая приостанавливается на каждой
+потенциально блокирующей операции и возобновляется event-loop'ом
+при готовности сокета.
+
+\includegraphics[width=\textwidth]{assets/wikipedia-cli-request-fsm}
+
+\begin{figure}[h]
+\caption{Состояния корутины сетевого запроса}
+\label{fig:request-fsm}
+\end{figure}
+
+\subsection*{Слои приложения}
+
+\begin{enumerate}
+    \item \textbf{Транспортный слой} (\texttt{event\_loop2},
+          \texttt{eloop\_net}, \texttt{eloop\_ssl},
+          \texttt{eloop\_http})~--- внешняя библиотека, построенная
+          на корутинах поверх \texttt{libco} и системного вызова
+          \texttt{poll}. Обеспечивает неблокирующие сокеты,
+          TLS-соединение (через OpenSSL) и HTTP-клиент с
+          инкрементальным парсером заголовков. Слой не знает, как
+          используется: приложение вызывает функции вида
+          \texttt{http\_send\_req}, \texttt{http\_recv\_resp}, и
+          получает данные по мере их поступления.
+
+    \item \textbf{Уровень клиента API} (\texttt{wikipedia.c})~---
+          один метод \texttt{request\_wikipedia}, который
+          выполняет полный цикл: соединение, отправку
+          HTTP-запроса, чтение тела ответа, парсинг JSON и возврат
+          результата вызывающему. Всё взаимодействие с сетью
+          инкапсулировано внутри; вызывающий видит только
+          \texttt{struct wikipedia\_resp}.
+
+    \item \textbf{Уровень пользовательского интерфейса}
+          (\texttt{userloop.c}, \texttt{spinner.c})~---
+          REPL-цикл, индикатор прогресса, отображение результатов
+          и выбор пользователя. Не знает ни о сокетах, ни об
+          HTTP, ни об SSL; работает только с
+          \texttt{struct wikipedia\_resp}.
+
+    \item \textbf{Вспомогательный слой} (\texttt{io/bufio.c},
+          \texttt{strutils.c})~--- буферизация ввода-вывода и
+          утилиты (URL-кодирование, отсечение пробелов).
+\end{enumerate}
+
+\subsection*{Асинхронность без колбэков}
+
+Ключевое архитектурное решение~--- использование корутин вместо
+колбэков. Каждый сетевой запрос оформляется как обычная функция,
+внутри которой вызовы \texttt{esock\_*} и \texttt{http\_*}
+выглядят как синхронные, но на самом деле приостанавливают
+корутину и возвращают управление event-loop'у до готовности
+сокета. Например, тело функции \texttt{wikipedia\_request}
+читается сверху вниз, как обычный синхронный код, но при этом
+работает параллельно с корутиной спиннера и корутиной основного
+REPL-цикла.
+
+Это позволяет писать асинхронный код без вложенных лямбд и без
+явного управления состоянием парсера: корутина сама несёт в
+своём стеке всё промежуточное состояние (соединение, буферы,
+парсер JSON), а event-loop заботится только о том, чтобы
+возобновить её, когда сокет готов.
+
+\section{Описание интерфейса пользователя программы}
+
+\lstset{style=session}
+
+\subsection{Общие сведения}
+
+Программа представляет собой интерактивный консольный клиент
+поиска по Википедии. Взаимодействие построено по схеме REPL
+(read--eval--print loop): программа выводит приглашение \texttt{>},
+читает строку со стандартного ввода, выполняет поиск и снова
+возвращается к приглашению.
+
+Программа не принимает аргументов командной строки. Все действия
+выполняются через интерактивный ввод. Завершение~--- по сигналу
+EOF (комбинация \texttt{Ctrl+D}) или принудительно \texttt{Ctrl+C}.
+Никаких файлов на диске программа не создаёт и не читает.
+
+\subsection{Запуск и завершение}
+
+Запуск:
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+$ ./wikipedia-cli
+> _
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+После запуска программа выводит приглашение и ожидает ввода
+поискового запроса. Ввод завершается нажатием \texttt{Enter}.
+Пустая строка игнорируется только на уровне поиска (Википедия
+вернёт пустой результат).
+
+Завершение работы~--- комбинацией \texttt{Ctrl+D} (EOF на
+стандартном вводе). Программа корректно закрывает SSL-контекст,
+освобождает память и выходит с кодом~0.
+
+\subsection{Сценарий поиска}
+
+Поиск выполняется в четыре шага.
+
+\textbf{Шаг 1. Ввод запроса.} Пользователь вводит запрос после
+приглашения:
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+> functional programming
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+\textbf{Шаг 2. Выполнение запроса.} Пока идёт HTTPS-соединение и
+сервер формирует ответ, программа отображает вращающийся индикатор
+активности~--- символы \texttt{-}, \texttt{\textbackslash},
+\texttt{|}, \texttt{/}, сменяющие друг друга с периодом
+100~мс. Индикатор рисуется в одной позиции строки с помощью
+символа возврата каретки \texttt{\textbackslash r}, поэтому не
+засоряет вывод:
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+> functional programming
+Searching... -
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+\textbf{Шаг 3. Вывод результатов.} По завершении запроса
+индикатор стирается, и программа выводит пронумерованный список
+найденных статей:
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+1: Функциональное программирование
+2: Лямбда-исчисление
+3: Haskell
+4: OCaml
+5: Функтор
+6: Монада (программирование)
+7: Чистота (программирование)
+8: Ленивые вычисления
+9: Комбинаторная логика
+10: Схема (язык программирования)
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+Википедия по умолчанию возвращает 10 результатов на запрос.
+
+\textbf{Шаг 4. Выбор страницы.} Программа выводит приглашение
+\texttt{select page>} и ожидает ввода номера из списка:
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+select page> 3
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+После ввода корректного номера программа запускает браузер
+(\texttt{xdg-open}) на соответствующей странице Википедии и
+возвращается к основному приглашению:
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+select page> 3
+> _
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+Если пользователь введёт \texttt{q} вместо номера, выбор будет
+отменён, и программа вернётся к основному приглашению без
+открытия браузера.
+
+\subsection{Спиннер и его роль}
+
+Спиннер~--- отдельная корутина, которая запускается на время
+сетевого запроса и останавливается, когда приходит ответ. С точки
+зрения пользователя это означает, что интерфейс остаётся
+отзывчивым во время долгого соединения: каждая итерация спиннера
+происходит примерно раз в 100~мс, тогда как основной REPL-цикл в
+это время заблокирован на ожидании сетевого ответа (но не
+процессор~--- операционная система при этом свободна).
+
+\subsection{Обработка ошибочного ввода}
+
+\textbf{Нечисловой номер страницы.} Если в ответ на
+\texttt{select page>} ввести строку, которая не начинается с
+цифры, преобразование \texttt{strtol} вернёт~0, что меньше 1 и
+поэтому не попадёт в допустимый диапазон:
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+select page> abc
+entered number is not in the list
+select page> _
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+\textbf{Номер вне диапазона.} Аналогично, число больше количества
+найденных статей или меньше единицы отклоняется с тем же
+сообщением.
+
+\textbf{Отмена выбора.} Ввод \texttt{q} на приглашении
+\texttt{select page>} трактуется как отказ от открытия страницы.
+Программа возвращается в главное приглашение.
+
+\subsection{Сетевые ошибки}
+
+Если на этапе соединения или TLS-рукопожатия произошла ошибка,
+программа печатает диагностику в стандартный поток ошибок и
+возвращается к приглашению:
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+> test
+Searching... error: connection failed
+> _
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+Различаются три класса ошибок:
+
+\begin{itemize}
+    \item \texttt{error: connection failed}~--- не удалось
+          установить TCP-соединение с сервером (DNS не разрешился,
+          сервер недоступен, порт закрыт);
+    \item \texttt{error: transport failure}~--- соединение
+          установлено, но произошла ошибка на уровне TLS или
+          HTTP (обрыв соединения, некорректный ответ сервера);
+    \item \texttt{error: invalid response}~--- сервер вернул
+          HTTP-код, отличный от 200 (например, 4xx или 5xx).
+\end{itemize}
+
+\subsection{Модель данных}
+
+Результат одного запроса описывается структурой
+\texttt{struct wikipedia\_resp}, которая содержит:
+
+\begin{itemize}
+    \item \texttt{status}~--- перечисление
+          \texttt{enum wiki\_resp\_status}, одно из
+          \texttt{WRS\_OK}, \texttt{WRS\_CONNECTION\_FAILED},
+          \texttt{WRS\_INVALID\_RESPONSE},
+          \texttt{WRS\_TRANSPORT\_FAILURE};
+    \item \texttt{payload}~--- указатель на разобранный JSON-ответ
+          (тип \texttt{json\_object*}), действителен только при
+          \texttt{status == WRS\_OK}.
+\end{itemize}
+
+Вызывающий код обязан проверять \texttt{status} перед обращением
+к \texttt{payload}. Это часть неявного контракта между
+\texttt{request\_wikipedia} и её вызывающим.
+
+\section{Примеры работы и описание}
+
+Ниже приведены типовые сценарии работы. Строки, начинающиеся с
+\texttt{>\ },~--- это то, что вводит пользователь; остальные
+строки~--- вывод программы.
+
+\subsection{Успешный поиск и открытие страницы}
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+$ ./wikipedia-cli
+> корутина
+Searching... \
+1: Сопрограмма
+2: Корутина
+3: Асинхронный ввод-вывод
+4: Fibers
+5: Поток выполнения
+6: Зелёные потоки
+7: Легковесные процессы
+8: Concurrency
+9: Setcontext
+10: Ucontext
+select page> 1
+> _
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+После выбора страницы браузер открывается на
+\texttt{ru.wikipedia.org/w/index.php?curid=XXXXXXX}. Сообщений об
+успехе программа не печатает~--- открытие браузера считается
+само собой разумеющимся.
+
+\subsection{Отмена выбора страницы}
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+> haskell
+Searching... |
+1: Haskell
+2: GHC
+3: Glasgow Haskell Compiler
+...
+select page> q
+> _
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+Ввод \texttt{q} не открывает браузер и не печатает сообщений.
+
+\subsection{Ошибка DNS или соединения}
+
+Если Wi-Fi отключён и \texttt{ru.wikipedia.org} не резолвится:
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+> test
+Searching... error: connection failed
+> _
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+Программа не завершается и не «зависает»~--- она возвращает
+управление в REPL, и следующий запрос можно отправить сразу.
+
+\subsection{Обрыв соединения во время запроса}
+
+Если соединение было установлено, но сервер закрыл его до
+завершения ответа:
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+> test
+Searching... error: transport failure
+> _
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+Этот класс ошибок покрывает также ошибки TLS (например,
+несовпадение сертификата) и ошибки парсинга HTTP-ответа.
+
+\subsection{Сервер вернул 4xx/5xx}
+
+Если сервер вернул HTTP-код, отличный от 200:
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+> test
+Searching... error: invalid response
+> _
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+\subsection{Некорректный номер страницы}
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+> linux
+Searching... /
+1: Linux
+2: Ядро Linux
+3: GNU
+...
+select page> 42
+entered number is not in the list
+select page> abc
+entered number is not in the list
+select page> 2
+> _
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+\subsection{Завершение через Ctrl+D}
+
+\renewcommand{\baselinestretch}{1}
+\begin{lstlisting}
+> quit
+$
+\end{lstlisting}
+\renewcommand{\baselinestretch}{1.5}
+
+Программа закрывает SSL-контекст, освобождает все выделенные
+ресурсы и выходит с кодом~0. Слово \texttt{quit} здесь не
+команда~--- программа получает \texttt{EOF} на стандартном вводе,
+когда пользователь нажимает \texttt{Ctrl+D}; строка \texttt{quit}
+в примере~--- это просто демонстрация того, что при этом
+происходит.
+
+\section{Текст программы}
+\lstset{style=coolprint}
+\renewcommand{\baselinestretch}{1}
+\input{assets/source}
+\renewcommand{\baselinestretch}{1.5}
+
+\section{Выводы}
+
+В ходе выполнения практической работы было разработано консольное
+приложение~--- клиент поиска по Википедии~--- на языке~C~99 с
+использованием собственной библиотеки асинхронного
+ввода-вывода. Программа выполняет HTTPS-запросы, парсит JSON,
+отображает результаты и открывает выбранную статью в браузере,
+не блокируя пользовательский интерфейс.
+
+\subsection*{Реализованная функциональность}
+
+В соответствии с заданием были реализованы:
+
+\begin{itemize}
+    \item интерактивный REPL-цикл с обработкой \texttt{Ctrl+D}
+          (EOF) как команды завершения;
+    \item асинхронное HTTPS-соединение с
+          \texttt{ru.wikipedia.org}, не блокирующее основной
+          цикл приложения;
+    \item парсинг HTTP-ответа (заголовки, тело, chunked
+          encoding) и парсинг JSON-ответа через библиотеку
+          \texttt{json-c};
+    \item индикатор прогресса (спиннер) в виде отдельной
+          корутины, обновляющийся каждые 100~мс;
+    \item URL-кодирование поискового запроса;
+    \item обработка ошибок трёх классов: сетевые, транспортные,
+          ошибки валидации ответа;
+    \item открытие браузера на выбранной статье через
+          \texttt{xdg-open}.
+\end{itemize}
+
+\subsection*{Соблюдение принципов объектно-ориентированного
+программирования}
+
+\begin{enumerate}
+    \item \textbf{Инкапсуляция.} Все структуры данных
+          (\texttt{struct wikipedia\_resp}, \texttt{struct
+          enet\_socket}, \texttt{struct bufio},
+          \texttt{struct http\_transport}) объявлены как
+          непрозрачные типы в заголовочных файлах; их поля
+          видны только внутри реализующего модуля. Изменение
+          состояния выполняется исключительно через
+          функции-методы (\texttt{http\_send\_req},
+          \texttt{esock\_recv}, \texttt{bio\_flush} и~т.~д.),
+          которые проверяют предусловия и возвращают
+          коды ошибок.
+
+    \item \textbf{Композиция.} Приложение построено снизу
+          вверх: \texttt{event\_loop} управляет корутинами;
+          \texttt{eloop\_net} обеспечивает сокеты;
+          \texttt{eloop\_ssl} оборачивает их в TLS;
+          \texttt{eloop\_http} строит HTTP-клиент над
+          транспортом через \texttt{bufio}; \texttt{wikipedia}
+          инкапсулирует бизнес-логику запроса;
+          \texttt{userloop} управляет интерфейсом. Каждый
+          слой владеет своими подобъектами и освобождает их
+          при завершении.
+
+    \item \textbf{Полиморфизм.} В коде активно используются
+          указатели на функции как способ абстракции над
+          поведением:
+          \begin{itemize}
+              \item \texttt{bio\_init} принимает указатели на
+                    \texttt{read} и \texttt{write}, что
+                    позволяет HTTP-клиенту одинаково работать
+                    поверх TCP и поверх TLS без изменения
+                    своего кода;
+              \item \texttt{esock\_setup\_transport} принимает
+                    указатель на функцию очистки, что позволяет
+                    подключать произвольные транспорты (TLS,
+                    SOCKS5-прокси) к одному сокету;
+              \item \texttt{esock\_callbacks} и
+                    \texttt{essl\_callbacks} реализуют паттерн
+                    «наблюдатель» для событий закрытия,
+                    ошибок и таймаутов;
+              \item \texttt{eloop\_add} принимает
+                    \texttt{ev\_routine}~--- функцию без
+                    аргументов,~--- что позволяет запускать
+                    произвольный код как корутину.
+          \end{itemize}
+          Во всех случаях выбор конкретной реализации
+          происходит в момент создания объекта, а не в момент
+          вызова~--- классический паттерн «стратегия».
+
+    \item \textbf{Абстракция.} Вызывающий код
+          (\texttt{userloop.c}) не знает, что находится под
+          \texttt{request\_wikipedia}: сокеты, TLS, HTTP,
+          JSON~--- всё скрыто за одной функцией, которая
+          принимает строку и возвращает структуру с
+          результатом. Аналогично, HTTP-клиент не знает,
+          работает он поверх TCP или TLS,~--- для него есть
+          только \texttt{read}/\texttt{write} callbacks.
+          Каждый слой скрывает детали нижнего слоя за
+          минимальным интерфейсом.
+
+    \item \textbf{Разделение ответственности.} Три уровня
+          (транспорт, клиент API, интерфейс пользователя)
+          ничего не знают друг о друге, кроме
+          непосредственного соседа снизу. Изменение,
+          например, формата вывода результатов не затрагивает
+          ни HTTP-клиент, ни сетевой слой; добавление нового
+          API-эндпоинта требует изменения только
+          \texttt{wikipedia.c}.
+\end{enumerate}
+
+\subsection*{Принятые архитектурные решения}
+
+\begin{itemize}
+    \item \textbf{Корутины вместо колбэков.} Асинхронный код
+          выглядит как обычный синхронный: нет вложенных
+          лямбд, нет ручного state machine, нет явного
+          управления контекстом парсера. Всё промежуточное
+          состояние (соединение, буферы, парсер) лежит на
+          стеке корутины и автоматически освобождается при её
+          завершении.
+
+    \item \textbf{Стек-выделенные замыкания.} Структура
+          \texttt{struct wikipedia\_req\_closure} находится
+          на стеке функции \texttt{request\_wikipedia}, но
+          это безопасно: корутина приостанавливает сама себя
+          на \texttt{ev\_recv\_message}, и её стек остаётся
+          живым до получения ответа. Такая схема невозможна
+          для потоков, но естественна для корутин.
+
+    \item \textbf{setjmp/longjmp для обработки ошибок HTTP.}
+          Вместо возврата кодов ошибок из каждой функции
+          HTTP-слоя используется \texttt{longjmp}: если парсер
+          обнаруживает ошибку, он «выбрасывает» её в
+          \texttt{jmp\_buf}, который находится на стеке
+          вызывающего кода. Это разделяет нормальный поток и
+          обработку ошибок, но требует ручной очистки
+          ресурсов~--- поэтому переменные \texttt{buf} и
+          \texttt{jtk} объявлены \texttt{volatile} (после
+          \texttt{longjmp} компилятор не обязан сохранять
+          значения не-\texttt{volatile} локальных переменных).
+
+    \item \textbf{Отдельный таск для спиннера.} Спиннер
+          реализован не как «фоновый поток», а как корутина,
+          которая крутится в том же event-loop. Пока
+          HTTP-запрос ждёт данных от сокета, спиннер получает
+          управление раз в 100~мс и перерисовывает символ.
+          Это не блокирует event-loop и не требует
+          дополнительных потоков или сигналов.
+
+    \item \textbf{Транспортная абстракция HTTP.} Через
+          \texttt{bio\_init} HTTP-клиент получает указатели на
+          функции чтения и записи, которые могут указывать на
+          сокет или на TLS-обёртку. Один и тот же парсер
+          работает и для \texttt{http://}, и для
+          \texttt{https://}, без \texttt{if}-ов по типу
+          транспорта.
+\end{itemize}
+
+\subsection*{Полученные навыки}
+
+\begin{itemize}
+    \item проектирование многослойной архитектуры и
+          распределение ответственности между модулями;
+    \item реализация асинхронного ввода-вывода на основе
+          корутин и неблокирующих сокетов;
+    \item работа с протоколом TLS через OpenSSL;
+    \item написание HTTP/1.1 клиента с инкрементальным
+          парсером заголовков и поддержкой chunked encoding;
+    \item парсинг JSON и обработка древовидных структур через
+          \texttt{json-c};
+    \item организация управления памятью при отсутствии
+          сборщика мусора;
+    \item применение паттерна «стратегия» и «наблюдатель» в
+          условиях отсутствия классов;
+    \item построение интерфейса пользователя с
+          неблокирующим индикатором прогресса;
+    \item работа с системой контроля версий Git и оформление
+          проекта в виде отдельного репозитория.
+\end{itemize}
+
+\subsection*{Заключение}
+
+Поставленная задача выполнена в полном объёме. Программа
+функционирует согласно требованиям задания, поддерживает
+интерактивный интерфейс, корректно обрабатывает сетевые и
+пользовательские ошибки, демонстрирует применение принципов
+объектно-ориентированного проектирования в проекте на языке~C.
+
+Основное отличие от первой практики~--- работа с внешним
+состоянием (сетью, таймаутами, ошибками ввода-вывода) и
+необходимость поддерживать отзывчивость интерфейса при
+длительных операциях. Это потребовало построения собственной
+библиотеки асинхронного ввода-вывода на корутинах, что выходит
+за рамки типичного учебного задания, но позволяет глубже
+понять, как устроены современные async-фреймворки (libuv,
+tokio, async/await) и как они соотносятся с классическими
+принципами ООП.
+
+Полученный код легко расширяется: добавление нового
+API-эндпоинта сводится к написанию новой функции в
+\texttt{wikipedia.c}; замена \texttt{xdg-open} на
+платформо-специфичный запуск браузера~--- к правке одной
+функции в \texttt{userloop.c}; замена формата вывода
+результатов не затрагивает ни HTTP-клиент, ни сетевой слой.
+
+\end{document}

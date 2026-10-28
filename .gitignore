@@ -1,3 +1,6 @@
 *.d
 *.o
 search
+*.aux
+*.log
+*.out
