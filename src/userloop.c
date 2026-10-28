@@ -91,7 +91,7 @@ static int display_variants(json_object *payload)
 static void open_in_browser(json_object *obj)
 {
     char buffer[256];
-    snprintf(buffer, sizeof buffer, "xdg-open https://ru.wikipedia.org/w/index.php?curid=%d", json_object_get_int(obj));
+    snprintf(buffer, sizeof buffer, "xdg-open https://ru.wikipedia.org/w/index.php?curid=%d 2>/dev/null", json_object_get_int(obj));
     system(buffer);
 }
 
